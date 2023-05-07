@@ -1,22 +1,8 @@
-;; ----- Manualy installed packages -----
-;; evil - VIM mode
-;; yasnippet - Yet Another Snippet extension. Used by "irony-mode" for  to provide post-completion expansion of function arguments.
-;; irony - It is minor 'irony-mode' for autocompletion for C++ which uses libclang
-;; company-irony - with company-irony you have an asynchronous completion backend that will not get in your way if the completion takes some time. It supports overloaded functions and if you have Yasnippet installed the function arguments are inserted as placeholders to fill-in
-;; flycheck-iron - This package provides a flycheck checker for the C, C++ and Objective-C languages.
-
 ;; ---------------------
 ;; General configuration
 ;; ---------------------
 
 ;; Enable MELPA package repository
-
-;; Added by Package.el.  This must come before configurations of
-;; installed packages.  Don't delete this line.  If you don't want it,
-;; just comment it out by adding a semicolon to the start of the line.
-;; You may delete these explanatory comments.
-(package-initialize)
-
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 
@@ -28,12 +14,15 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
-   (quote
-    ("bb74a01bb5fd37151299f560cdc6b015ed5947c2c573861d7ab223085c90bbf1" "4f01a90c3aa9963e956302f0203564f6fae32ed624bbfe416743ba63f22566a4" default)))
+   '("06f0b439b62164c6f8f84fdda32b62fb50b6d00e8b01c2208e55543a6337433a" "bb08c73af94ee74453c90422485b29e5643b73b05e8de029a6909af6a3fb3f58" "f74e8d46790f3e07fbb4a2c5dafe2ade0d8f5abc9c203cd1c29c7d5110a85230" "2ff9ac386eac4dffd77a33e93b0c8236bb376c5a5df62e36d4bfa821d56e4e20" "d80952c58cf1b06d936b1392c38230b74ae1a2a6729594770762dc0779ac66b7" "b1a691bb67bd8bd85b76998caf2386c9a7b2ac98a116534071364ed6489b695d" "72ed8b6bffe0bfa8d097810649fd57d2b598deef47c992920aef8b5d9599eefe" "61d63a9956381708c3048dead82c6617555830ae6ffa281f54c603dc17650652" "4f01a90c3aa9963e956302f0203564f6fae32ed624bbfe416743ba63f22566a4" default))
+ '(elpy-rpc-python-command "/Users/andlev/opt/anaconda3/bin/python3")
  '(inhibit-startup-screen t)
  '(package-selected-packages
-   (quote
-    (flycheck-irony company-irony irony yasnippet evil inkpot-theme))))
+   '(flycheck company-mode lsp-ui lsp-mode rustic eglot multiple-cursors orderless use-package vertico zenburn-theme gruvbox-theme pdf-tools projectile rust-mode markdown-mode jedi elpy magit deadgrep rg ripgrep evil inkpot-theme))
+ '(python-shell-exec-path '("/Users/andlev/opt/anaconda3/bin/"))
+ '(python-shell-interpreter "python3")
+ '(warning-suppress-log-types '((use-package) (use-package) (use-package) (use-package)))
+ '(warning-suppress-types '((use-package) (use-package) (use-package) (use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -41,30 +30,214 @@
  ;; If there is more than one, they won't work right.
  )
 
-;; -----------------
-;; Packages sections
-;; -----------------
+;; ----- Section "Packages" -----
 
-;; Enable Evil if it exist
-(when (require 'evil nil t)
-  (evil-mode 1))
+(package-initialize)
+(elpy-enable)
 
 
-;; -------------------
-;; My own custom modes
-;; -------------------
+;; Some personal hooks for minor modes
+(defun display-line-numbers-mode-hook ()
+  (display-line-numbers-mode t))
 
-;; (VectorCast mode) Add and load custom file
-(when (load ".emacs.d/vectorcast-mode.el" t)
-  (setq vectorcast-mode-file "~/.emacs.d/vectorcast-mode.el")
-  (load-file vectorcast-mode-file))
+(defun fci-mode-hook ()
+  (fci-mode 1))  ;; Enables a ruler 
 
-;; Add very basic syntax highlight (Generic Mode for Obscure Languages)
-(require 'generic-x)
 
-;; ----------------
-;; General behavior
-;; ---------------
+;; Ruler package
+(use-package fill-column-indicator :ensure)
+
+;; Ripgreap
+(use-package rg :ensure)
+
+;; Dead (for ripgrep)
+(use-package deadgrep :ensure)
+
+;; Globally set keys
+(global-set-key (kbd "<f5>") #'deadgrep)
+
+
+
+;; Rust
+(use-package rustic
+  :ensure
+  :bind (:map rustic-mode-map
+              ("M-j" . lsp-ui-imenu)
+              ("M-?" . lsp-find-references)
+              ("C-c C-c l" . flycheck-list-errors)
+              ("C-c C-c a" . lsp-execute-code-action)
+              ("C-c C-c r" . lsp-rename)
+              ("C-c C-c q" . lsp-workspace-restart)
+              ("C-c C-c Q" . lsp-workspace-shutdown)
+              ("C-c C-c s" . lsp-rust-analyzer-status))
+  :config
+  ;; uncomment for less flashiness
+  ;; (setq lsp-eldoc-hook nil)
+  ;; (setq lsp-enable-symbol-highlighting nil)
+  ;; (setq lsp-signature-auto-activate nil)
+  (setq company-auto-complete t)
+  (fci-mode 1)
+  (linum-mode 1)
+
+  ;; comment to disable rustfmt on save
+  (setq rustic-format-on-save t)
+  (add-hook 'rustic-mode-hook 'rk/rustic-mode-hook)
+  (add-hook 'rustic-mode-hook 'display-line-numbers-mode-hook)
+  (add-hook 'rustic-mode-hook 'fci-mode-hook))
+
+
+(defun rk/rustic-mode-hook ()
+  ;; so that run C-c C-c C-r works without having to confirm, but don't try to
+  ;; save rust buffers that are not file visiting. Once
+  ;; https://github.com/brotzeit/rustic/issues/253 has been resolved this should
+  ;; no longer be necessary.
+  (when buffer-file-name
+    (setq-local buffer-save-without-query t))
+  (add-hook 'before-save-hook 'lsp-format-buffer nil t))
+
+;; LSP
+(use-package lsp-mode
+  :ensure
+  :commands lsp
+  :custom
+  ;; what to use when checking on-save. "check" is default, I prefer clippy
+  (lsp-rust-analyzer-cargo-watch-command "clippy")
+  (lsp-eldoc-render-all t)
+  (lsp-idle-delay 0.6)
+  ;; enable / disable the hints as you prefer:
+  (lsp-rust-analyzer-server-display-inlay-hints t)
+  (lsp-rust-analyzer-display-lifetime-elision-hints-enable "skip_trivial")
+  (lsp-rust-analyzer-display-chaining-hints t)
+  (lsp-rust-analyzer-display-lifetime-elision-hints-use-parameter-names nil)
+  (lsp-rust-analyzer-display-closure-return-type-hints t)
+  (lsp-rust-analyzer-display-parameter-hints nil)
+  (lsp-rust-analyzer-display-reborrow-hints nil)
+  :config
+  ;; Deactivate the documentation shown in the minibuffer
+  ;; (setq lsp-eldoc-hook nil)
+  ;; Do less when cursror moves
+  ;; (setq lsp-signature-auto-activate nil)
+  ;; (setq lsp-enable-symbol-highlighting nil)
+  (add-hook 'lsp-mode-hook 'lsp-ui-mode))
+
+
+(use-package lsp-ui
+  :ensure
+  :commands lsp-ui-mode
+  :custom
+  (lsp-ui-peek-always-show t)
+  (lsp-ui-sideline-show-hover t)
+  (lsp-ui-doc-enable nil))
+
+;; Company mode
+(use-package company-mode
+  :ensure
+  :custom
+  (company-idle-delay 0.5) ;; how long to wait until popup
+  (company-begin-commands nil) ;; uncomment to disable popup
+  ;; (company-minimum-prefix-length 2)  ;; Commented out since I don't know what it does
+  :bind
+  (:map company-active-map
+	      ("C-n" . company-select-next)
+	      ("C-p" . company-select-previous)
+	      ("M-<" . company-select-first)
+	      ("M->" . company-select-last)))
+  ;; :config
+  ;; Uncomment to run the company mode for all buffers
+  ;; (add-hook 'after-init-hook 'global-company-mode))
+
+;; Yasnippet
+(use-package yasnippet
+  :ensure
+  :config
+  (yas-reload-all)
+  (add-hook 'prog-mode-hook 'yas-minor-mode)
+  (add-hook 'text-mode-hook 'yas-minor-mode))
+
+;; To enable snippet expansion, code completion and indentation when
+;; you press the TAB key, we need to customize the command that is
+;; running when pressing TAB:
+(use-package company
+  ;; ... see above ...
+  (:map company-mode-map
+	      ("<tab>". tab-indent-or-complete)
+	      ("TAB". tab-indent-or-complete)))
+
+(defun company-yasnippet-or-completion ()
+  (interactive)
+  (or (do-yas-expand)
+      (company-complete-common)))
+
+(defun check-expansion ()
+  (save-excursion
+    (if (looking-at "\\_>") t
+      (backward-char 1)
+      (if (looking-at "\\.") t
+        (backward-char 1)
+        (if (looking-at "::") t nil)))))
+
+(defun do-yas-expand ()
+  (let ((yas/fallback-behavior 'return-nil))
+    (yas/expand)))
+
+(defun tab-indent-or-complete ()
+  (interactive)
+  (if (minibufferp)
+      (minibuffer-complete)
+    (if (or (not yas/minor-mode)
+            (null (do-yas-expand)))
+        (if (check-expansion)
+            (company-complete-common)
+          (indent-for-tab-command)))))
+
+;; Flycheck
+(use-package flycheck :ensure)
+
+;; Multiple-cursor
+(use-package multiple-cursors
+  :ensure
+  :bind
+  (:map global-key-map
+        ;; When you have an active region that spans multiple lines, the
+        ;; following will add a cursor to each line:
+        ("C-S-c C-S-c" . mc/edit-lines)
+        ;; When you want to add multiple cursors not based on continuous
+        ;; lines, but based on keywords in the buffer, use:
+        ("C->" . mc/mark-next-like-this)
+        ("C-<" . mc/mark-previous-like-this)
+        ("C-c C-<" . mc/mark-all-like-this)))
+
+;; Compat (required by Magit and should be installed first)
+(use-package compat :ensure)
+
+;; Magit
+(use-package magit :ensure)
+
+;; Dired
+;; The sorting does not wor on macos due to the following error:
+;; "Listing directory failed but ‘access-file’ worked"
+;; Probably it's caused by MacOS using 'ls -dired' instead of expected
+;; 'ls --dired' (double minus signed). For now (6.05.2023) the sorting is off
+;; (use-package dired
+;;   :ensure nil
+;;   :commands (dired dired-jump)
+;;   :bind (("C-x C-j". dired-jump))
+;;   :custom ((dired-listing-switches "-dired -agho --group-directories-first")))
+
+;; Select default theme
+(add-hook 'after-init-hook (lambda () (load-theme 'sanityinc-tomorrow-night)))
+
+;; Disable redundant (for me) GUI bars, menu, etc
+(scroll-bar-mode -1)
+(tool-bar-mode -1)
+(tooltip-mode -1)
+(set-fringe-mode 10)
+(menu-bar-mode -1)
+
+;; Set tup the visible bell
+(setq visible-bell t)
+
+
 
 ;; Disable mouuse wheel acceleration
 (setq mouse-wheel-progressive-speed nil)
@@ -76,42 +249,98 @@
 ;; Set default Tab Width
 (setq-default tab-width 2)
 
-;; ----------------
-;; Themes \ Colours
-;; ---------------
-
-;; Accept Inkpot theme as safe
+;; Enable Hunspell for spellchecking 
+(setq-default ispell-program-name "/opt/homebrew/bin/hunspell")
+(setq ispell-really-hunspell t)
 
 
 
-;; Use  Inkpot theme as default one
-(add-hook 'after-init-hook (lambda () (load-theme 'inkpot)))
+;; Make fci-mode enabled for python mode
+(defun fci-mode-en-hook ()
+  (fci-mode 1))
 
-;; Add company-irony to your company backends.
-(eval-after-load 'company
-  '(add-to-list 'company-backends 'company-irony))
+(defun linum-mode-en-hook ()
+  (linum-mode 1))
 
-;; YASnippet configuration
-;; (add-to-list 'load-path
-;;              "~/path-to-yasnippet")
-(require 'yasnippet)
-(yas-global-mode 1)
-;; Use yas-minor-mode on a per-buffer basis
-;;
-;; To use YASnippet as a non-global minor mode, don't call yas-global-mode;
-;; instead call yas-reload-all to load the snippet tables and then call
-;; yas-minor-mode from the hooks of major-modes where you want YASnippet
-;; enabled.
-;; (yas-reload-all) <- from the github, but there is no such function
-;; (add-hook 'prog-mode-hook #'yas-minor-mode)
+(add-hook 'python-mode-hook 'fci-mode-en-hook)
+(add-hook 'python-mode-hook 'linum-mode-en-hook)
 
-;; 'irony' configuration
-(add-hook 'c++-mode-hook 'irony-mode)
-(add-hook 'c-mode-hook 'irony-mode)
-(add-hook 'objc-mode-hook 'irony-mode)
 
-(add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
 
-;; 'flycheck-irony' configuration
-(eval-after-load 'flycheck
-  '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+;; Org-mode. Set agenda files
+(setq org-agenda-files (list "~/Documents/todo*.org"
+                             ))
+
+;; Configure built-in backup
+(setq
+   backup-by-copying t      ; don't clobber symlinks
+   backup-directory-alist
+    '(("." . "~/.emacs-backups/"))    ; don't litter my fs tree
+   delete-old-versions t
+   kept-new-versions 6
+   kept-old-versions 2
+   version-control t)       ; use versioned backups
+
+;; ;; Enable vertico
+;; (use-package vertico
+;;   :init
+;;   (vertico-mode)
+
+;;   ;; Different scroll margin
+;;   ;; (setq vertico-scroll-margin 0)
+
+;;   ;; Show more candidates
+;;   ;; (setq vertico-count 20)
+
+;;   ;; Grow and shrink the Vertico minibuffer
+;;   ;; (setq vertico-resize t)
+
+;;   ;; Optionally enable cycling for `vertico-next' and `vertico-previous'.
+;;   ;; (setq vertico-cycle t)
+;;   )
+
+;; ;; Persist history over Emacs restarts. Vertico sorts by history position.
+;; (use-package savehist
+;;   :init
+;;   (savehist-mode))
+
+;; ;; A few more useful configurations...
+;; (use-package emacs
+;;   :init
+;;   ;; Add prompt indicator to `completing-read-multiple'.
+;;   ;; We display [CRM<separator>], e.g., [CRM,] if the separator is a comma.
+;;   (defun crm-indicator (args)
+;;     (cons (format "[CRM%s] %s"
+;;                   (replace-regexp-in-string
+;;                    "\\`\\[.*?]\\*\\|\\[.*?]\\*\\'" ""
+;;                    crm-separator)
+;;                   (car args))
+;;           (cdr args)))
+;;   (advice-add #'completing-read-multiple :filter-args #'crm-indicator)
+
+;;   ;; Do not allow the cursor in the minibuffer prompt
+;;   (setq minibuffer-prompt-properties
+;;         '(read-only t cursor-intangible t face minibuffer-prompt))
+;;   (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+
+;;   ;; Emacs 28: Hide commands in M-x which do not work in the current mode.
+;;   ;; Vertico commands are hidden in normal buffers.
+;;   ;; (setq read-extended-command-predicate
+;;   ;;       #'command-completion-default-include-p)
+
+;;   ;; Enable recursive minibuffers
+;;   (setq enable-recursive-minibuffers t))
+
+;; ;; Optionally use the `orderless' completion style.
+;; (use-package orderless
+;;   :init
+;;   ;; Configure a custom style dispatcher (see the Consult wiki)
+;;   ;; (setq orderless-style-dispatchers '(+orderless-consult-dispatch orderless-affix-dispatch)
+;;   ;;       orderless-component-separator #'orderless-escapable-split-on-space)
+;;   (setq completion-styles '(orderless basic)
+;;         completion-category-defaults nil
+;;         completion-category-overrides '((file (styles partial-completion)))))
+
+;; ;; End of Vertico
+
+
