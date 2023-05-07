@@ -18,7 +18,7 @@
  '(elpy-rpc-python-command "/Users/andlev/opt/anaconda3/bin/python3")
  '(inhibit-startup-screen t)
  '(package-selected-packages
-   '(flycheck company-mode lsp-ui lsp-mode rustic eglot multiple-cursors orderless use-package vertico zenburn-theme gruvbox-theme pdf-tools projectile rust-mode markdown-mode jedi elpy magit deadgrep rg ripgrep evil inkpot-theme))
+   '(company-box flycheck company-mode lsp-ui lsp-mode rustic eglot multiple-cursors orderless use-package vertico zenburn-theme gruvbox-theme pdf-tools projectile rust-mode markdown-mode jedi elpy magit deadgrep rg ripgrep evil inkpot-theme))
  '(python-shell-exec-path '("/Users/andlev/opt/anaconda3/bin/"))
  '(python-shell-interpreter "python3")
  '(warning-suppress-log-types '((use-package) (use-package) (use-package) (use-package)))
@@ -30,19 +30,19 @@
  ;; If there is more than one, they won't work right.
  )
 
-;; ----- Section "Packages" -----
-
-(package-initialize)
-(elpy-enable)
 
 
-;; Some personal hooks for minor modes
+;; Sort completion proposal vertically (instead of horizontally).
+(setq completions-format 'vertical)
+
+
+;; A hook to print line numbers
 (defun display-line-numbers-mode-hook ()
   (display-line-numbers-mode t))
 
+;; A hook to enable a ruler
 (defun fci-mode-hook ()
-  (fci-mode 1))  ;; Enables a ruler 
-
+  (fci-mode 1))
 
 ;; Ruler package
 (use-package fill-column-indicator :ensure)
@@ -51,10 +51,12 @@
 (use-package rg :ensure)
 
 ;; Dead (for ripgrep)
-(use-package deadgrep :ensure)
+(use-package deadgrep
+  :ensure
+  :bind (("<f5>" . deadgrep)))
 
 ;; Globally set keys
-(global-set-key (kbd "<f5>") #'deadgrep)
+;;(global-set-key (kbd "<f5>") #'deadgrep)
 
 
 
@@ -75,9 +77,6 @@
   ;; (setq lsp-eldoc-hook nil)
   ;; (setq lsp-enable-symbol-highlighting nil)
   ;; (setq lsp-signature-auto-activate nil)
-  (setq company-auto-complete t)
-  (fci-mode 1)
-  (linum-mode 1)
 
   ;; comment to disable rustfmt on save
   (setq rustic-format-on-save t)
@@ -129,6 +128,18 @@
   (lsp-ui-sideline-show-hover t)
   (lsp-ui-doc-enable nil))
 
+;; Configure CC-mode (for C and C++)
+(use-package cc-mode
+  :custom
+  (c-syntactic-indentation nil)
+  :config
+  (add-hook 'c-mode-hook 'display-line-numbers-mode-hook)
+  (add-hook 'c-mode-hook 'fci-mode-hook)
+  (add-hook 'c-mode-hook 'lsp)
+  (add-hook 'c++-mode-hook 'display-line-numbers-mode-hook)
+  (add-hook 'c++-mode-hook 'fci-mode-hook)
+  (add-hook 'c++-mode-hook 'lsp))
+
 ;; Company mode
 (use-package company-mode
   :ensure
@@ -142,9 +153,15 @@
 	      ("C-p" . company-select-previous)
 	      ("M-<" . company-select-first)
 	      ("M->" . company-select-last)))
-  ;; :config
-  ;; Uncomment to run the company mode for all buffers
-  ;; (add-hook 'after-init-hook 'global-company-mode))
+
+;; Uncomment to run the company mode for all buffers
+(add-hook 'after-init-hook 'global-company-mode)
+
+(global-set-key (kbd "M-C-i") #'company-complete)
+
+;; Company-box
+;; (use-package company-box
+  ;; :hook (company-mode . company-box-mode))
 
 ;; Yasnippet
 (use-package yasnippet
@@ -162,6 +179,17 @@
   (:map company-mode-map
 	      ("<tab>". tab-indent-or-complete)
 	      ("TAB". tab-indent-or-complete)))
+
+;; Org-mode
+;; (use-package org
+;;   :ensure nil
+;;   :custom
+;;   (setq org-directory "")
+;;   (setq org-agenda-files '(""
+;;                            ""
+;;                            ""))
+;;   (setq org-clock-sound "~/.../bell.wav"))
+
 
 (defun company-yasnippet-or-completion ()
   (interactive)
