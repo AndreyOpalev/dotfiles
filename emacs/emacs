@@ -120,7 +120,6 @@
   ;; (setq lsp-enable-symbol-highlighting nil)
   (add-hook 'lsp-mode-hook 'lsp-ui-mode))
 
-
 (use-package lsp-ui
   :ensure
   :commands lsp-ui-mode
@@ -129,18 +128,33 @@
   (lsp-ui-sideline-show-hover t)
   (lsp-ui-doc-enable nil))
 
+
 ;; Configure CC-mode (for C and C++)
 (use-package cc-mode
   :custom
   (c-syntactic-indentation nil)
+
   :config
+  (setq lsp-eldoc-enable-hover nil)
+  (setq lsp-eldoc-hook nil)
+  (setq lsp-ui-doc-enable nil)
+  (setq lsp-ui-sideline-show-hover nil)
+  (setq lsp-ui-sideline-show-diagnostics nil)
+  (setq lsp-ui-peek-enable nil)
+  (setq lsp-ui-doc-enable nil)
+  (setq lsp-enable-indentation nil)
+  (setq lsp-enable-on-type-formatting nil)
+
   (add-hook 'c-mode-hook 'display-line-numbers-mode-hook)
   (add-hook 'c-mode-hook 'fci-mode-hook)
   (add-hook 'c-mode-hook 'lsp)
+  (add-hook 'c-mode-hook (lambda () (c-toggle-comment-style -1)))
   (add-hook 'c-mode-hook (lambda () (flyspell-prog-mode)))
+
   (add-hook 'c++-mode-hook 'display-line-numbers-mode-hook)
   (add-hook 'c++-mode-hook 'fci-mode-hook)
-  (add-hook 'c++-mode-hook 'lsp))
+  (add-hook 'c++-mode-hook 'lsp)
+  (add-hook 'c++-mode-hook (lambda () (c-toggle-comment-style -1))))
   (add-hook 'c++-mode-hook (lambda () (flyspell-prog-mode)))
 
 ;; Company mode
@@ -192,7 +206,6 @@
   (setq org-directory "~/Org")
   (setq org-agenda-files '("~/Org"))
   (setq org-agenda-file-regexp "\\`[^.].*\\.org\\'"))
-;;   (setq org-clock-sound "~/.../bell.wav"))
 
 ;; Flyspell
 (use-package flyspell
@@ -249,6 +262,22 @@
 ;; Magit
 (use-package magit :ensure)
 
+;; flymake-shellcheck (make sure 'shellcheck' is installed).
+(use-package flymake-shellcheck
+  :ensusre
+  :commands flymake-shellcheck-load
+  :init
+  (add-hook 'sh-mode-hook 'flymake-shellcheck-load))
+
+;; Ace-windows for jumping windows flawlessly
+(use-package ace-window
+  :ensure
+  :config
+  (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
+  :bind
+  (("M-o" . 'ace-window)))
+
+;; Org Roam (from https://www.orgroam.com/)
 (use-package org-roam
   :ensure t
   :custom
