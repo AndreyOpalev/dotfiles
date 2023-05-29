@@ -17,8 +17,9 @@
    '("06f0b439b62164c6f8f84fdda32b62fb50b6d00e8b01c2208e55543a6337433a" "bb08c73af94ee74453c90422485b29e5643b73b05e8de029a6909af6a3fb3f58" "f74e8d46790f3e07fbb4a2c5dafe2ade0d8f5abc9c203cd1c29c7d5110a85230" "2ff9ac386eac4dffd77a33e93b0c8236bb376c5a5df62e36d4bfa821d56e4e20" "d80952c58cf1b06d936b1392c38230b74ae1a2a6729594770762dc0779ac66b7" "b1a691bb67bd8bd85b76998caf2386c9a7b2ac98a116534071364ed6489b695d" "72ed8b6bffe0bfa8d097810649fd57d2b598deef47c992920aef8b5d9599eefe" "61d63a9956381708c3048dead82c6617555830ae6ffa281f54c603dc17650652" "4f01a90c3aa9963e956302f0203564f6fae32ed624bbfe416743ba63f22566a4" default))
  '(elpy-rpc-python-command "/Users/andlev/opt/anaconda3/bin/python3")
  '(inhibit-startup-screen t)
+ '(org-agenda-files nil)
  '(package-selected-packages
-   '(company-box flycheck company-mode lsp-ui lsp-mode rustic eglot multiple-cursors orderless use-package vertico zenburn-theme gruvbox-theme pdf-tools projectile rust-mode markdown-mode jedi elpy magit deadgrep rg ripgrep evil inkpot-theme))
+   '(org-roam company-box flycheck company-mode lsp-ui lsp-mode rustic eglot multiple-cursors orderless use-package vertico zenburn-theme gruvbox-theme pdf-tools projectile rust-mode markdown-mode jedi elpy magit deadgrep rg ripgrep evil inkpot-theme))
  '(python-shell-exec-path '("/Users/andlev/opt/anaconda3/bin/"))
  '(python-shell-interpreter "python3")
  '(warning-suppress-log-types '((use-package) (use-package) (use-package) (use-package)))
@@ -136,9 +137,11 @@
   (add-hook 'c-mode-hook 'display-line-numbers-mode-hook)
   (add-hook 'c-mode-hook 'fci-mode-hook)
   (add-hook 'c-mode-hook 'lsp)
+  (add-hook 'c-mode-hook (lambda () (flyspell-prog-mode)))
   (add-hook 'c++-mode-hook 'display-line-numbers-mode-hook)
   (add-hook 'c++-mode-hook 'fci-mode-hook)
   (add-hook 'c++-mode-hook 'lsp))
+  (add-hook 'c++-mode-hook (lambda () (flyspell-prog-mode)))
 
 ;; Company mode
 (use-package company-mode
@@ -181,15 +184,21 @@
 	      ("TAB". tab-indent-or-complete)))
 
 ;; Org-mode
-;; (use-package org
-;;   :ensure nil
-;;   :custom
-;;   (setq org-directory "")
-;;   (setq org-agenda-files '(""
-;;                            ""
-;;                            ""))
+(use-package org
+  :ensure nil
+  :config
+  (add-hook 'org-mode-hook 'turn-on-flyspell)
+  :custom
+  (setq org-directory "~/Org")
+  (setq org-agenda-files '("~/Org"))
+  (setq org-agenda-file-regexp "\\`[^.].*\\.org\\'"))
 ;;   (setq org-clock-sound "~/.../bell.wav"))
 
+;; Flyspell
+(use-package flyspell
+  :ensure nil
+  :custom
+  (setq ispell-list-command "--list")) ;; run flyspell with aspell, not ispell
 
 (defun company-yasnippet-or-completion ()
   (interactive)
@@ -225,15 +234,14 @@
 (use-package multiple-cursors
   :ensure
   :bind
-  (:map global-key-map
-        ;; When you have an active region that spans multiple lines, the
-        ;; following will add a cursor to each line:
-        ("C-S-c C-S-c" . mc/edit-lines)
-        ;; When you want to add multiple cursors not based on continuous
-        ;; lines, but based on keywords in the buffer, use:
-        ("C->" . mc/mark-next-like-this)
-        ("C-<" . mc/mark-previous-like-this)
-        ("C-c C-<" . mc/mark-all-like-this)))
+  (;; When you have an active region that spans multiple lines, the
+   ;; following will add a cursor to each line:
+   ("C-S-c C-S-c" . mc/edit-lines)
+   ;; When you want to add multiple cursors not based on continuous
+   ;; lines, but based on keywords in the buffer, use:
+   ("C->" . mc/mark-next-like-this)
+   ("C-<" . mc/mark-previous-like-this)
+   ("C-c C-<" . mc/mark-all-like-this)))
 
 ;; Compat (required by Magit and should be installed first)
 (use-package compat :ensure)
@@ -241,16 +249,37 @@
 ;; Magit
 (use-package magit :ensure)
 
+(use-package org-roam
+  :ensure t
+  :custom
+  (org-roam-directory (file-truename "~/OrgRoam/"))
+  :bind (("C-c n l" . org-roam-buffer-toggle)
+         ("C-c n f" . org-roam-node-find)
+         ("C-c n g" . org-roam-graph)
+         ("C-c n i" . org-roam-node-insert)
+         ("C-c n c" . org-roam-capture)
+         ;; Dailies
+         ("C-c n j" . org-roam-dailies-capture-today))
+  :config
+  ;; If you're using a vertical completion framework, you might want a more informative completion interface
+  (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+  (org-roam-db-autosync-mode)
+  ;; If using org-roam-protocol
+  (require 'org-roam-protocol))
+
 ;; Dired
-;; The sorting does not wor on macos due to the following error:
-;; "Listing directory failed but ‘access-file’ worked"
-;; Probably it's caused by MacOS using 'ls -dired' instead of expected
-;; 'ls --dired' (double minus signed). For now (6.05.2023) the sorting is off
-;; (use-package dired
-;;   :ensure nil
-;;   :commands (dired dired-jump)
-;;   :bind (("C-x C-j". dired-jump))
-;;   :custom ((dired-listing-switches "-dired -agho --group-directories-first")))
+;; For the macos ("darwin") dired uses GNU ls, which comes in
+;; the coreutils package. It needs to be installed separetelly:
+;;     brew install coreutils
+(use-package dired
+  :ensure nil
+  :commands (dired dired-jump)
+  :config
+  (when (string= system-type "darwin")
+    (setq dired-use-ls-dired t
+          insert-directory-program "/opt/homebrew/bin/gls"))
+  :bind (("C-x C-j". dired-jump))
+  :custom ((dired-listing-switches "-agho --group-directories-first")))
 
 ;; Select default theme
 (add-hook 'after-init-hook (lambda () (load-theme 'sanityinc-tomorrow-night)))
@@ -276,12 +305,6 @@
 
 ;; Set default Tab Width
 (setq-default tab-width 2)
-
-;; Enable Hunspell for spellchecking 
-(setq-default ispell-program-name "/opt/homebrew/bin/hunspell")
-(setq ispell-really-hunspell t)
-
-
 
 ;; Make fci-mode enabled for python mode
 (defun fci-mode-en-hook ()
