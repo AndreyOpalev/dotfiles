@@ -345,12 +345,6 @@
 (add-hook 'python-mode-hook 'fci-mode-en-hook)
 (add-hook 'python-mode-hook 'linum-mode-en-hook)
 
-
-
-;; Org-mode. Set agenda files
-(setq org-agenda-files (list "~/Documents/todo*.org"
-                             ))
-
 ;; Configure built-in backup
 (setq
    backup-by-copying t      ; don't clobber symlinks
